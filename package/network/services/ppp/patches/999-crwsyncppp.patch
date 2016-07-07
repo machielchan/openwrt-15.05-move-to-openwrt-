@@ -1,0 +1,178 @@
+--- ./pppd/chap-new.c	2016-04-19 00:44:26.681953502 +0800
++++ ./pppd-fix/chap-new.c	2016-04-20 14:54:28.000000000 +0800
+@@ -36,6 +36,7 @@
+ #include "session.h"
+ #include "chap-new.h"
+ #include "chap-md5.h"
++#include "syncppp.h"
+ 
+ #ifdef CHAPMS
+ #include "chap_ms.h"
+@@ -492,6 +493,8 @@
+ 	p[2] = len >> 8;
+ 	p[3] = len;
+ 
++	syncppp();
++
+ 	output(0, response, PPP_HDRLEN + len);
+ }
+ 
+--- ./pppd/Makefile.linux	2016-04-19 00:44:26.925975766 +0800
++++ ./pppd-fix/Makefile.linux	2016-04-20 14:48:45.000000000 +0800
+@@ -13,16 +13,16 @@
+ 
+ PPPDSRCS = main.c magic.c fsm.c lcp.c ipcp.c upap.c chap-new.c md5.c ccp.c \
+ 	   ecp.c ipxcp.c auth.c options.c sys-linux.c md4.c chap_ms.c \
+-	   demand.c utils.c tty.c eap.c chap-md5.c session.c
++	   demand.c utils.c tty.c eap.c chap-md5.c session.c syncppp.c
+ 
+ HEADERS = ccp.h session.h chap-new.h ecp.h fsm.h ipcp.h \
+ 	ipxcp.h lcp.h magic.h md5.h patchlevel.h pathnames.h pppd.h \
+-	upap.h eap.h
++	upap.h eap.h syncppp.h
+ 
+ MANPAGES = pppd.8
+ PPPDOBJS = main.o magic.o fsm.o lcp.o ipcp.o upap.o chap-new.o md5.o ccp.o \
+ 	   ecp.o auth.o options.o demand.o utils.o sys-linux.o ipxcp.o tty.o \
+-	   eap.o chap-md5.o session.o
++	   eap.o chap-md5.o session.o syncppp.o
+ 
+ #
+ # include dependencies if present
+@@ -33,7 +33,7 @@
+ # CC = gcc
+ #
+ COPTS = -O2 -pipe -Wall -g
+-LIBS =
++LIBS = -lpthread
+ 
+ # Uncomment the next 2 lines to include support for Microsoft's
+ # MS-CHAP authentication protocol.  Also, edit plugins/radius/Makefile.linux.
+--- ./pppd/syncppp.c	1970-01-01 08:00:00.000000000 +0800
++++ ./pppd-fix/syncppp.c	2016-04-20 16:48:39.000000000 +0800
+@@ -0,0 +1,96 @@
++#include <stdio.h>
++#include <stdlib.h>
++#include <errno.h>
++#include <semaphore.h>
++#include <time.h>
++#include <sys/file.h>
++#include <unistd.h>
++#include "pppd.h"
++#include "syncppp.h"
++
++static sem_t *block;
++static sem_t *count;
++
++int crwsyncppp()
++{
++    int isfirst = 0;
++    int value;
++
++    //使用文件锁来收集并发数
++    FILE *f = fopen(LOCKFILE_NAME, "w+");
++    if (!f)
++    {
++        error("syncppp: openfile error");
++        return -1;
++    }
++    if(flock(fileno(f), LOCK_EX | LOCK_NB) == 0)
++    {
++        isfirst = 1;
++        info("syncppp: first pppd checked, waitting for %d second", SYNCPPP_WAITTIME);
++        sleep(SYNCPPP_WAITTIME);
++        flock(fileno(f), LOCK_UN);
++    }
++    else
++    {
++        if (sem_post(count) < 0) error("syncppp: sem_post(count) failed");
++        info("syncppp: another pppd checked");
++    }
++    fclose(f);
++
++    if(isfirst == 1)
++    {
++        //根据并发数释放信号量
++        if (sem_getvalue(count, &value) < 0)
++        {
++            error("syncppp: sem_getvalue(count) failed");
++            return -1;
++        }
++        info("syncppp: %d pppd checked, start to sync response", value + 1);
++        while (value-- > 0)
++        {
++            if (sem_post(block) < 0)
++            {
++                error("syncppp: sem_post(block) failed");
++                return -1;
++            }
++        }
++    }
++    else
++    {
++        //等待信号量释放，超时则退出
++        struct timespec ts;
++        if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
++        {
++            error("syncppp: clock_gettime error");
++            return -1;
++        }
++        ts.tv_sec += SYNCPPP_TIMEOUT;
++
++        if (sem_timedwait(block, &ts) < 0)
++        {
++            if (errno == ETIMEDOUT) error("syncppp: sem_timewait(block) time out");
++            else error("syncppp: sem_timewait(block) error");
++            return -1;
++        }
++    }
++
++    return 0;
++}
++
++int syncppp()
++{
++    //建立同步信号
++    block = sem_open(SEM_BLOCK_NAME, O_CREAT, 0644, 0);
++    count = sem_open(SEM_COUNT_NAME, O_CREAT, 0644, 0);
++    if (block == SEM_FAILED || count == SEM_FAILED)
++    {
++        error("syncppp: sem_open failed, errno %d", errno);
++        return -1;
++    }
++    int result = crwsyncppp();
++    sem_close(count);
++    sem_close(block);
++    sem_unlink(SEM_COUNT_NAME);
++    sem_unlink(SEM_BLOCK_NAME);
++    return result;
++}
+--- ./pppd/syncppp.h	1970-01-01 08:00:00.000000000 +0800
++++ ./pppd-fix/syncppp.h	2016-04-20 16:48:38.000000000 +0800
+@@ -0,0 +1,7 @@
++#define SEM_BLOCK_NAME  "syncppp_block"
++#define SEM_COUNT_NAME  "syncppp_count"
++#define LOCKFILE_NAME "/var/run/syncppp.pid"
++#define SYNCPPP_WAITTIME 3
++#define SYNCPPP_TIMEOUT 5
++
++int syncppp();
+--- ./pppd/upap.c	2014-08-09 20:31:39.000000000 +0800
++++ ./pppd-fix/upap.c	2016-04-20 14:56:21.000000000 +0800
+@@ -51,6 +51,7 @@
+ 
+ #include "pppd.h"
+ #include "upap.h"
++#include "syncppp.h"
+ 
+ static const char rcsid[] = RCSID;
+ 
+@@ -568,6 +569,8 @@
+     PUTCHAR(u->us_passwdlen, outp);
+     BCOPY(u->us_passwd, outp, u->us_passwdlen);
+ 
++    syncppp();
++
+     output(u->us_unit, outpacket_buf, outlen + PPP_HDRLEN);
+ 
+     TIMEOUT(upap_timeout, u, u->us_timeouttime);
