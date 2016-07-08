@@ -1,0 +1,1 @@
+sensors | grep + | sed '1s/temp1/2.4G/g;2s/temp2/5G/g;3s/temp1/CPU/g'
