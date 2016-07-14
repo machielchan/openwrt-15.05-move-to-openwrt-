@@ -49,6 +49,9 @@ msgstr "GFW名单"
 msgid "China WhiteList"
 msgstr "大陆白名单"
 
+msgid "Game Mode"
+msgstr "游戏模式"
+
 msgid "DNS Forward Mode"
 msgstr "DNS转发模式"
 

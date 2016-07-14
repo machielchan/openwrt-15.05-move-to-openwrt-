@@ -27,14 +27,6 @@ uci_get_by_type() {
 	echo ${ret:=$3}
 }
 
-iptables_ext() {
-	iptables -t nat -C $2 $3 2>/dev/null
-	local ret=$?
-	if [ "$ret" -ne 0 ];then
-		iptables -t nat -$1 $2 $3 2>/dev/null
-	fi
-}
-
 gen_config_file() {
 	cat <<-EOF >$CONFIG_FILE
 		{
@@ -71,6 +63,7 @@ start_redir() {
 	mkdir -p /var/run /var/etc
 	/usr/bin/ss-redir \
 	-c $CONFIG_FILE $ARG_OTA \
+	-u \
 	-f /var/run/ss-redir.pid
 }
 
@@ -111,15 +104,12 @@ get_action_chain() {
 		chnroute)
 			echo "SHADOWSOCKS_CHN"
 		;;
+		gamemode)
+			echo "SHADOWSOCKS_GAM"
 	esac
 }
 
 add_rule() {
-	iptables -t nat -N SHADOWSOCKS 2>/dev/null
-	iptables -t nat -N SHADOWSOCKS_GLO 2>/dev/null
-	iptables -t nat -N SHADOWSOCKS_GFW 2>/dev/null
-	iptables -t nat -N SHADOWSOCKS_CHN 2>/dev/null
-	iptables_ext I PREROUTING "-j SHADOWSOCKS"
 	#创建所需的ipset
 	IPSET_GFW="vpn"
 	IPSET_CHN="chnroute"
@@ -130,19 +120,41 @@ add_rule() {
 	sed -e "s/^/add $IPSET_CHN &/g" /usr/share/shadowsocks/chnroute.txt | awk '{print $0} END{print "COMMIT"}' | ipset -R
 	#生成代理规则
 	#  忽略特殊IP段
-	iptables_ext A SHADOWSOCKS "-d 0.0.0.0/8 -j RETURN"
-	iptables_ext A SHADOWSOCKS "-d 10.0.0.0/8 -j RETURN"
-	iptables_ext A SHADOWSOCKS "-d 127.0.0.0/8 -j RETURN"
-	iptables_ext A SHADOWSOCKS "-d 169.254.0.0/16 -j RETURN"
-	iptables_ext A SHADOWSOCKS "-d 172.16.0.0/12 -j RETURN"
-	iptables_ext A SHADOWSOCKS "-d 192.168.0.0/16 -j RETURN"
-	iptables_ext A SHADOWSOCKS "-d 224.0.0.0/4 -j RETURN"
-	iptables_ext A SHADOWSOCKS "-d 240.0.0.0/4 -j RETURN"
+	iptables -t nat -N SHADOWSOCKS
+	iptables -t nat -I PREROUTING -j SHADOWSOCKS
+	iptables -t nat -A SHADOWSOCKS -d 0.0.0.0/8 -j RETURN
+	iptables -t nat -A SHADOWSOCKS -d 10.0.0.0/8 -j RETURN
+	iptables -t nat -A SHADOWSOCKS -d 127.0.0.0/8 -j RETURN
+	iptables -t nat -A SHADOWSOCKS -d 169.254.0.0/16 -j RETURN
+	iptables -t nat -A SHADOWSOCKS -d 172.16.0.0/12 -j RETURN
+	iptables -t nat -A SHADOWSOCKS -d 192.168.0.0/16 -j RETURN
+	iptables -t nat -A SHADOWSOCKS -d 224.0.0.0/4 -j RETURN
+	iptables -t nat -A SHADOWSOCKS -d 240.0.0.0/4 -j RETURN
 	#  生成对应CHAIN
-	iptables_ext A SHADOWSOCKS_GLO "-p tcp -j REDIRECT --to $LOCAL_PORT"
-	iptables_ext A SHADOWSOCKS_GFW "-p tcp -m set --match-set $IPSET_GFW dst -j REDIRECT --to $LOCAL_PORT"
-	iptables_ext A SHADOWSOCKS_CHN "-p tcp -m set ! --match-set $IPSET_CDN dst -m set ! --match-set $IPSET_CHN dst -j REDIRECT --to $LOCAL_PORT"
-	#加载ACLS
+	iptables -t nat -N SHADOWSOCKS_GLO
+	iptables -t nat -A SHADOWSOCKS_GLO -p tcp -j REDIRECT --to $LOCAL_PORT
+	iptables -t nat -N SHADOWSOCKS_GFW
+	iptables -t nat -A SHADOWSOCKS_GFW -p tcp -m set --match-set $IPSET_GFW dst -j REDIRECT --to $LOCAL_PORT
+	iptables -t nat -N SHADOWSOCKS_CHN
+	iptables -t nat -A SHADOWSOCKS_CHN -p tcp -m set ! --match-set $IPSET_CDN dst -m set ! --match-set $IPSET_CHN dst -j REDIRECT --to $LOCAL_PORT
+	#  游戏模式
+	iptables -t nat -N SHADOWSOCKS_GAM
+	iptables -t nat -A SHADOWSOCKS_GAM -p tcp -m set ! --match-set $IPSET_CDN dst -m set ! --match-set $IPSET_CHN dst -j REDIRECT --to $LOCAL_PORT
+	ip route add local 0.0.0.0/0 dev lo table 100
+	ip rule add fwmark 0x01/0x01 table 100
+	iptables -t mangle -N SHADOWSOCKS
+	iptables -t mangle -I PREROUTING -j SHADOWSOCKS
+	iptables -t mangle -A SHADOWSOCKS -d 0.0.0.0/8 -j RETURN
+	iptables -t mangle -A SHADOWSOCKS -d 10.0.0.0/8 -j RETURN
+	iptables -t mangle -A SHADOWSOCKS -d 127.0.0.0/8 -j RETURN
+	iptables -t mangle -A SHADOWSOCKS -d 169.254.0.0/16 -j RETURN
+	iptables -t mangle -A SHADOWSOCKS -d 172.16.0.0/12 -j RETURN
+	iptables -t mangle -A SHADOWSOCKS -d 192.168.0.0/16 -j RETURN
+	iptables -t mangle -A SHADOWSOCKS -d 224.0.0.0/4 -j RETURN
+	iptables -t mangle -A SHADOWSOCKS -d 240.0.0.0/4 -j RETURN
+	iptables -t mangle -N SHADOWSOCKS_GAM
+	iptables -t mangle -A SHADOWSOCKS_GAM -p udp -m set ! --match-set $IPSET_CDN dst -m set ! --match-set $IPSET_CHN dst -j TPROXY --on-port $LOCAL_PORT --tproxy-mark 0x01/0x01
+	#  加载ACLS
 	for i in $(seq 0 100)
 	do
 		local ip=$(uci_get_by_type acl_rule ipaddr '' $i)
@@ -150,11 +162,18 @@ add_rule() {
 		if [ -z $ip ] || [ -z $mode ]; then
 			break
 		fi
-		iptables_ext A SHADOWSOCKS "-s $ip -j $(get_action_chain $mode)"
-		iptables_ext A SHADOWSOCKS "-s $ip -j RETURN"
+		iptables -t nat -A SHADOWSOCKS -s $ip -j $(get_action_chain $mode)
+		iptables -t nat -A SHADOWSOCKS -s $ip -j RETURN
+		if [ "$mode" == "gamemode" ]; then
+			iptables -t mangle -A SHADOWSOCKS -s $ip -j $(get_action_chain $mode)
+			iptables -t mangle -A SHADOWSOCKS -s $ip -j RETURN
+		fi
 	done
-	#加载默认代理模式
-	iptables_ext A SHADOWSOCKS "-j $(get_action_chain $PROXY_MODE)"
+	#  加载默认代理模式
+	iptables -t nat -A SHADOWSOCKS -j $(get_action_chain $PROXY_MODE)
+	if [ "$PROXY_MODE" == "gamemode" ]; then
+		iptables -t mangle -A SHADOWSOCKS -j $(get_action_chain $PROXY_MODE)
+	fi
 }
 
 del_rule() {
@@ -163,6 +182,12 @@ del_rule() {
 	iptables -t nat -F SHADOWSOCKS_GLO 2>/dev/null && iptables -t nat -X SHADOWSOCKS_GLO 2>/dev/null
 	iptables -t nat -F SHADOWSOCKS_GFW 2>/dev/null && iptables -t nat -X SHADOWSOCKS_GFW 2>/dev/null
 	iptables -t nat -F SHADOWSOCKS_CHN 2>/dev/null && iptables -t nat -X SHADOWSOCKS_CHN 2>/dev/null
+	iptables -t nat -F SHADOWSOCKS_GAM 2>/dev/null && iptables -t nat -X SHADOWSOCKS_GAM 2>/dev/null
+	iptables -t mangle -D PREROUTING -j SHADOWSOCKS 2>/dev/null
+	iptables -t mangle -F SHADOWSOCKS 2>/dev/null && iptables -t mangle -X SHADOWSOCKS 2>/dev/null
+	iptables -t mangle -F SHADOWSOCKS_GAM 2>/dev/null && iptables -t mangle -X SHADOWSOCKS_GAM 2>/dev/null
+	ip rule del fwmark 0x01/0x01 table 100 2>/dev/null
+	ip route del local 0.0.0.0/0 table 100 2>/dev/null
 }
 
 start() {

@@ -77,6 +77,7 @@ o:value("disable", translate("No Proxy"))
 o:value("global", translate("Global Proxy"))
 o:value("gfwlist", translate("GFW List"))
 o:value("chnroute", translate("China WhiteList"))
+o:value("gamemode", translate("Game Mode"))
 
 o = s:option(ListValue, "dns_mode", translate("DNS Forward Mode"))
 o.default = "dns2socks"
@@ -141,5 +142,6 @@ o:value("disable", translate("No Proxy"))
 o:value("global", translate("Global Proxy"))
 o:value("gfwlist", translate("GFW List"))
 o:value("chnroute", translate("China WhiteList"))
+o:value("gamemode", translate("Game Mode"))
 
 return m

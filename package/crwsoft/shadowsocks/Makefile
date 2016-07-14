@@ -39,8 +39,8 @@ define Package/shadowsocks/Default
 	DEPENDS:=$(3)
 endef
 
-Package/shadowsocks = $(call Package/shadowsocks/Default,openssl,(OpenSSL),+libopenssl +libpthread +ipset +ip)
-Package/shadowsocks-polarssl = $(call Package/shadowsocks/Default,polarssl,(PolarSSL),+libpolarssl +libpthread +ipset +ip)
+Package/shadowsocks = $(call Package/shadowsocks/Default,openssl,(OpenSSL),+libopenssl +libpthread +ipset +ip +iptables-mod-tproxy)
+Package/shadowsocks-polarssl = $(call Package/shadowsocks/Default,polarssl,(PolarSSL),+libpolarssl +libpthread +ipset +ip +iptables-mod-tproxy)
 
 define Package/shadowsocks/description
 shadowsocks is a lightweight secured socks5 proxy for embedded devices and low end boxes.
