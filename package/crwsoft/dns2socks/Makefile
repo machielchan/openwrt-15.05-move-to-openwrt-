@@ -47,7 +47,7 @@ endef
 
 define Package/dns2socks/install
 	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/dns2socks $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/dns2socks $(1)/usr/bin/
 endef
 
 $(eval $(call BuildPackage,dns2socks))
