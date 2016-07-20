@@ -48,10 +48,10 @@ ifeq ($(ARCH),aarch64)
 	$(INSTALL_BIN) ./files/armv7/kcpclient $(1)/usr/bin/
 endif
 ifeq ($(ARCH),mips)
-	$(INSTALL_BIN) ./files/ar71xx/kcpclient $(1)/usr/bin/
+	# $(INSTALL_BIN) ./files/ar71xx/kcpclient $(1)/usr/bin/
 endif
 ifeq ($(ARCH),mipsel)
-	$(INSTALL_BIN) ./files/7620n/kcpclient $(1)/usr/bin/
+	# $(INSTALL_BIN) ./files/7620n/kcpclient $(1)/usr/bin/
 endif
 ifeq ($(ARCH),i386)
 	$(INSTALL_BIN) ./files/x86/kcpclient $(1)/usr/bin/

@@ -1,0 +1,10 @@
+#!/bin/sh
+
+uci -q batch <<-EOT
+	set network.lan.macaddr=$(nvram get macaddr)
+	commit firewall
+EOT
+
+rm -rf /etc/uci-defaults/10-fixlanmac
+
+exit 0
