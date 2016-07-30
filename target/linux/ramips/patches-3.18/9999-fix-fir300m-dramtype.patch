@@ -1,0 +1,10 @@
+--- ./arch/mips/ralink/mt7620.c	2016-07-30 18:18:01.000000000 +0800
++++ ./arch-fix/mips/ralink/mt7620.c	2016-07-30 18:17:15.906249057 +0800
+@@ -467,6 +467,7 @@
+ mt7620_dram_init(struct ralink_soc_info *soc_info)
+ {
+ 	switch (dram_type) {
++	case 3:
+ 	case SYSCFG0_DRAM_TYPE_SDRAM:
+ 		pr_info("Board has SDRAM\n");
+ 		soc_info->mem_size_min = MT7620_SDRAM_SIZE_MIN;

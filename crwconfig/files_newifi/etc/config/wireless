@@ -6,7 +6,7 @@ config wifi-device 'radio0'
 	option htmode 'VHT80'
 	option country 'US'
 	option txpower '20'
-	option channel '149'
+	option channel '153'
 
 config wifi-iface
 	option device 'radio0'

@@ -421,6 +421,9 @@ ramips_board_detect() {
 	*"Lenovo Y1S")
 		name="y1s"
 		;;
+	*"FIR300M")
+		name="fir300m"
+		;;
 	*"Mediatek MT7621 evaluation board")
 		name="mt7621"
 		;;
