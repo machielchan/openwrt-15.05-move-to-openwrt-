@@ -34,19 +34,21 @@ define Package/shadowsocks/Default
 	SECTION:=net
 	CATEGORY:=Extra packages
 	TITLE:=Lightweight Secured Socks5 Proxy $(2)
-	URL:=https://github.com/crwnet/shadowsocks
+	URL:=https://github.com/shadowsocks/shadowsocks-libev
 	VARIANT:=$(1)
 	DEPENDS:=$(3)
 endef
 
 Package/shadowsocks = $(call Package/shadowsocks/Default,openssl,(OpenSSL),+libopenssl +libpthread +ipset +ip +iptables-mod-tproxy)
 Package/shadowsocks-polarssl = $(call Package/shadowsocks/Default,polarssl,(PolarSSL),+libpolarssl +libpthread +ipset +ip +iptables-mod-tproxy)
+Package/shadowsocks-mbedtls = $(call Package/shadowsocks/Default,mbedtls,(mbedTLS),+libmbedtls +libpthread +ipset +ip +iptables-mod-tproxy)
 
 define Package/shadowsocks/description
 shadowsocks is a lightweight secured socks5 proxy for embedded devices and low end boxes.
 endef
 
 Package/shadowsocks-polarssl/description = $(Package/shadowsocks/description)
+Package/shadowsocks-mbedtls/description = $(Package/shadowsocks/description)
 
 define Package/shadowsocks/conffiles
 /etc/config/shadowsocks
@@ -54,10 +56,14 @@ endef
 
 Package/shadowsocks-polarssl/conffiles = $(Package/shadowsocks/conffiles)
 
-CONFIGURE_ARGS += --disable-ssp
+CONFIGURE_ARGS += --disable-documentation --disable-ssp
 
 ifeq ($(BUILD_VARIANT),polarssl)
 	CONFIGURE_ARGS += --with-crypto-library=polarssl
+endif
+
+ifeq ($(BUILD_VARIANT),mbedtls)
+	CONFIGURE_ARGS += --with-crypto-library=mbedtls
 endif
 
 define Package/shadowsocks/install
@@ -71,6 +77,8 @@ define Package/shadowsocks/install
 endef
 
 Package/shadowsocks-polarssl/install = $(Package/shadowsocks/install)
+Package/shadowsocks-mbedtls/install = $(Package/shadowsocks/install)
 
 $(eval $(call BuildPackage,shadowsocks))
 $(eval $(call BuildPackage,shadowsocks-polarssl))
+$(eval $(call BuildPackage,shadowsocks-mbedtls))
