@@ -40,7 +40,8 @@ gen_config_file() {
 			"mtu": $(uci_get_by_name $1 mtu),
 			"sndwnd": $(uci_get_by_name $1 sndwnd),
 			"rcvwnd": $(uci_get_by_name $1 rcvwnd),
-			"nocomp": $(uci_get_by_name $1 nocomp)
+			"nocomp": $(uci_get_by_name $1 nocomp),
+			"conn": $(uci_get_by_name $1 conn 1)
 		}
 EOF
 }
@@ -70,7 +71,8 @@ start_redir() {
 start_dns() {
 	case "$DNS_MODE" in
 		dns2socks)
-			/usr/bin/dns2socks \
+			cp /usr/bin/dns2socks /var/run/dns2kcpsocks
+			/var/run/dns2kcpsocks \
 			127.0.0.1:$SOCKS_PORT \
 			$DNS_FORWARD \
 			127.0.0.1:5300 \
@@ -169,17 +171,17 @@ add_rule() {
 }
 
 del_rule() {
-	iptables -t nat -D PREROUTING -j KCPTUN 2>/dev/null
-	iptables -t nat -F KCPTUN 2>/dev/null && iptables -t nat -X KCPTUN 2>/dev/null
-	iptables -t nat -F KCPTUN_GLO 2>/dev/null && iptables -t nat -X KCPTUN_GLO 2>/dev/null
-	iptables -t nat -F KCPTUN_GFW 2>/dev/null && iptables -t nat -X KCPTUN_GFW 2>/dev/null
-	iptables -t nat -F KCPTUN_CHN 2>/dev/null && iptables -t nat -X KCPTUN_CHN 2>/dev/null
-	iptables -t nat -F KCPTUN_GAM 2>/dev/null && iptables -t nat -X KCPTUN_GAM 2>/dev/null
-	# iptables -t mangle -D PREROUTING -j KCPTUN 2>/dev/null
-	# iptables -t mangle -F KCPTUN 2>/dev/null && iptables -t mangle -X KCPTUN 2>/dev/null
-	# iptables -t mangle -F KCPTUN_GAM 2>/dev/null && iptables -t mangle -X KCPTUN_GAM 2>/dev/null
-	# ip rule del fwmark 0x01/0x01 table 100 2>/dev/null
-	# ip route del local 0.0.0.0/0 table 100 2>/dev/null
+	iptables -t nat -D PREROUTING -j KCPTUN
+	iptables -t nat -F KCPTUN && iptables -t nat -X KCPTUN
+	iptables -t nat -F KCPTUN_GLO && iptables -t nat -X KCPTUN_GLO
+	iptables -t nat -F KCPTUN_GFW && iptables -t nat -X KCPTUN_GFW
+	iptables -t nat -F KCPTUN_CHN && iptables -t nat -X KCPTUN_CHN
+	# iptables -t nat -F KCPTUN_GAM && iptables -t nat -X KCPTUN_GAM
+	# iptables -t mangle -D PREROUTING -j KCPTUN
+	# iptables -t mangle -F KCPTUN && iptables -t mangle -X KCPTUN
+	# iptables -t mangle -F KCPTUN_GAM && iptables -t mangle -X KCPTUN_GAM
+	# ip rule del fwmark 0x01/0x01 table 100
+	# ip route del local 0.0.0.0/0 table 100
 }
 
 start() {
@@ -190,9 +192,7 @@ start() {
 }
 
 stop() {
-	if [ $(iptables -t nat -L KCPTUN | grep RETURN | wc -l) -gt 0 ]; then
-		del_rule
-		killall -q -9 kcpclient
-		killall -q -9 dns2socks
-	fi
+	del_rule
+	killall -q -9 kcpclient
+	killall -q -9 dns2kcpsocks
 }
