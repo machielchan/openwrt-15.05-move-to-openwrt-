@@ -180,17 +180,17 @@ add_rule() {
 }
 
 del_rule() {
-	iptables -t nat -D PREROUTING -j SHADOWSOCKS 2>/dev/null
-	iptables -t nat -F SHADOWSOCKS 2>/dev/null && iptables -t nat -X SHADOWSOCKS 2>/dev/null
-	iptables -t nat -F SHADOWSOCKS_GLO 2>/dev/null && iptables -t nat -X SHADOWSOCKS_GLO 2>/dev/null
-	iptables -t nat -F SHADOWSOCKS_GFW 2>/dev/null && iptables -t nat -X SHADOWSOCKS_GFW 2>/dev/null
-	iptables -t nat -F SHADOWSOCKS_CHN 2>/dev/null && iptables -t nat -X SHADOWSOCKS_CHN 2>/dev/null
-	iptables -t nat -F SHADOWSOCKS_GAM 2>/dev/null && iptables -t nat -X SHADOWSOCKS_GAM 2>/dev/null
-	iptables -t mangle -D PREROUTING -j SHADOWSOCKS 2>/dev/null
-	iptables -t mangle -F SHADOWSOCKS 2>/dev/null && iptables -t mangle -X SHADOWSOCKS 2>/dev/null
-	iptables -t mangle -F SHADOWSOCKS_GAM 2>/dev/null && iptables -t mangle -X SHADOWSOCKS_GAM 2>/dev/null
-	ip rule del fwmark 0x01/0x01 table 100 2>/dev/null
-	ip route del local 0.0.0.0/0 table 100 2>/dev/null
+	iptables -t nat -D PREROUTING -j SHADOWSOCKS
+	iptables -t nat -F SHADOWSOCKS && iptables -t nat -X SHADOWSOCKS
+	iptables -t nat -F SHADOWSOCKS_GLO && iptables -t nat -X SHADOWSOCKS_GLO
+	iptables -t nat -F SHADOWSOCKS_GFW && iptables -t nat -X SHADOWSOCKS_GFW
+	iptables -t nat -F SHADOWSOCKS_CHN && iptables -t nat -X SHADOWSOCKS_CHN
+	iptables -t nat -F SHADOWSOCKS_GAM && iptables -t nat -X SHADOWSOCKS_GAM
+	iptables -t mangle -D PREROUTING -j SHADOWSOCKS
+	iptables -t mangle -F SHADOWSOCKS && iptables -t mangle -X SHADOWSOCKS
+	iptables -t mangle -F SHADOWSOCKS_GAM && iptables -t mangle -X SHADOWSOCKS_GAM
+	ip rule del fwmark 0x01/0x01 table 100
+	ip route del local 0.0.0.0/0 table 100
 }
 
 start() {
@@ -201,11 +201,9 @@ start() {
 }
 
 stop() {
-	if [ $(iptables -t nat -L SHADOWSOCKS | grep RETURN | wc -l) -gt 0 ]; then
-		del_rule
-		killall -q -9 ss-redir
-		killall -q -9 ss-tunnel
-		killall -q -9 ss-local
-		killall -q -9 dns2socks
-	fi
+	del_rule
+	killall -q -9 ss-redir
+	killall -q -9 ss-tunnel
+	killall -q -9 ss-local
+	killall -q -9 dns2socks
 }
