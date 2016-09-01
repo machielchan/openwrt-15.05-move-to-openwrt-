@@ -25,7 +25,7 @@ define Package/adbyby
 	CATEGORY:=Extra packages
 	TITLE:=Powerful Advertisement Blocker
 	URL:=http://www.adbyby.com
-	DEPENDS:=+libstdcpp
+	DEPENDS:=
 	VARIANT:=
 endef
 
