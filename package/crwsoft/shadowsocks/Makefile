@@ -9,12 +9,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=shadowsocks
-PKG_VERSION:=2.4.8
+PKG_VERSION:=2.5.3
 PKG_RELEASE=1
 
 PKG_SOURCE_URL:=https://github.com/shadowsocks/shadowsocks-libev/archive/
 PKG_SOURCE:=v$(PKG_VERSION).tar.gz
-PKG_MD5SUM:=8b300e5732a594245fa9c08fd7fbf738
+PKG_MD5SUM:=798a48457c87cb3167ba82d8a7348adb
 
 PKG_LICENSE:=GPLv3
 PKG_LICENSE_FILES:=LICENSE
@@ -36,12 +36,12 @@ define Package/shadowsocks/Default
 	TITLE:=Lightweight Secured Socks5 Proxy $(2)
 	URL:=https://github.com/shadowsocks/shadowsocks-libev
 	VARIANT:=$(1)
-	DEPENDS:=$(3)
+	DEPENDS:=+libpthread +libpcre +ipset +ip +iptables-mod-tproxy $(3)
 endef
 
-Package/shadowsocks = $(call Package/shadowsocks/Default,openssl,(OpenSSL),+libopenssl +libpthread +ipset +ip +iptables-mod-tproxy)
-Package/shadowsocks-polarssl = $(call Package/shadowsocks/Default,polarssl,(PolarSSL),+libpolarssl +libpthread +ipset +ip +iptables-mod-tproxy)
-Package/shadowsocks-mbedtls = $(call Package/shadowsocks/Default,mbedtls,(mbedTLS),+libmbedtls +libpthread +ipset +ip +iptables-mod-tproxy)
+Package/shadowsocks = $(call Package/shadowsocks/Default,openssl,(OpenSSL),+libopenssl)
+Package/shadowsocks-polarssl = $(call Package/shadowsocks/Default,polarssl,(PolarSSL),+libpolarssl)
+Package/shadowsocks-mbedtls = $(call Package/shadowsocks/Default,mbedtls,(mbedTLS),+libmbedtls)
 
 define Package/shadowsocks/description
 shadowsocks is a lightweight secured socks5 proxy for embedded devices and low end boxes.

@@ -94,3 +94,5 @@ msgstr "访问控制列表是用于指定特殊IP代理模式的工具"
 msgid "IP Address"
 msgstr "内部IP地址"
 
+msgid "Dest Ports"
+msgstr "目标端口"

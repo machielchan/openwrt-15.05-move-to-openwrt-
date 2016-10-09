@@ -132,10 +132,9 @@ o = s:option(Value, "ipaddr", translate("IP Address"))
 o.width = "40%"
 o.datatype    = "ip4addr"
 o.placeholder = "0.0.0.0/0"
-o.rmempty = false
 
 o = s:option(ListValue, "proxy_mode", translate("Proxy Mode"))
-o.width = "40%"
+o.width = "30%"
 o.default = "disable"
 o.rmempty = false
 o:value("disable", translate("No Proxy"))
@@ -143,5 +142,9 @@ o:value("global", translate("Global Proxy"))
 o:value("gfwlist", translate("GFW List"))
 o:value("chnroute", translate("China WhiteList"))
 o:value("gamemode", translate("Game Mode"))
+
+o = s:option(Value, "ports", translate("Dest Ports"))
+o.width = "30%"
+o.placeholder = "80,443"
 
 return m
